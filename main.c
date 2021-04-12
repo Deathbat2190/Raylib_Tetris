@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct
 {
@@ -9,6 +10,8 @@ typedef struct
     int ySize;
     int positionX;
     int positionY;
+    int type;
+    Color color;
 } Shape;
 
 Shape* InitShape(int xSize, int ySize)
@@ -23,47 +26,55 @@ Shape* InitShape(int xSize, int ySize)
     return shape;
 }
 
-Shape* CreateShape(char type)
+Shape* CreateShape(int type)
 {
     Shape* shape = NULL;
     switch (type)
     {
-        case 'o':
+        case 0:
+            shape = InitShape(4, 1);
+            shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 1; shape->tiles[3] = 1;
+            shape->color = BLUE;
+            break;
+        case 1:
+            shape = InitShape(3, 2);
+            shape->tiles[0] = 1; shape->tiles[1] = 0; shape->tiles[2] = 0; 
+            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
+            shape->color = DARKBLUE;
+            break;
+        case 2:
+            shape = InitShape(3, 2);
+            shape->tiles[0] = 0; shape->tiles[1] = 0; shape->tiles[2] = 1; 
+            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
+            shape->color = ORANGE;
+            break;
+        case 3:
             shape = InitShape(2, 2);
             shape->tiles[0] = 1; shape->tiles[1] = 1; 
             shape->tiles[2] = 1; shape->tiles[3] = 1;
             shape->positionX = 4;
-            break;
-        case 'j':
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 1; shape->tiles[1] = 0; shape->tiles[2] = 0; 
-            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
-            break;
-        case 'l':
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 0; shape->tiles[1] = 0; shape->tiles[2] = 1; 
-            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
-            break;
-        case 's':
+            shape->color = YELLOW;
+            break;   
+        case 4:
             shape = InitShape(3, 2);
             shape->tiles[0] = 0; shape->tiles[1] = 1; shape->tiles[2] = 1; 
             shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 0;
+            shape->color = GREEN;
             break;
-        case 'z':
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 0; 
-            shape->tiles[3] = 0; shape->tiles[4] = 1; shape->tiles[5] = 1;
-            break;
-        case 't':
+        case 5:
             shape = InitShape(3, 2);
             shape->tiles[0] = 0; shape->tiles[1] = 1; shape->tiles[2] = 0; 
             shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
+            shape->color = PURPLE;
             break;
-        case 'i':
-            shape = InitShape(4, 1);
-            shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 1; shape->tiles[3] = 1;
+        case 6:
+            shape = InitShape(3, 2);
+            shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 0; 
+            shape->tiles[3] = 0; shape->tiles[4] = 1; shape->tiles[5] = 1;
+            shape->color = RED;
             break;
     }
+    shape->type = type;
     return shape;
 }
 
@@ -71,6 +82,36 @@ void FreeShape(Shape* shape)
 {
     free(shape->tiles);
     free(shape);
+}
+
+int rotationTransitions[7][4][2] = {{{2, -1}, {-2, 2}, {1, -2}, {-1, 1}},  //i
+                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //j
+                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //l
+                                    {{0, 0},  {0, 0},  {0, 0},  {0, 0}},   //o
+                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //s
+                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //t
+                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},}; //z
+
+void RotateShape(Shape* shape)
+{
+    shape->positionX += rotationTransitions[shape->type][shape->rotation][0];
+    shape->positionY += rotationTransitions[shape->type][shape->rotation][1];
+    shape->rotation = (shape->rotation + 1) % 4;
+    int xSize = shape->xSize;
+    shape->xSize = shape->ySize;
+    shape->ySize = xSize;
+
+    int* oldTiles = (int*)malloc(shape->xSize * shape->ySize * sizeof(int));
+    memcpy(oldTiles, shape->tiles, shape->xSize * shape->ySize * sizeof(int));
+    for(int y = 0; y < shape->ySize; ++y)
+    {
+        for(int x = 0; x < shape->xSize; ++x)
+        {
+            shape->tiles[y * shape->xSize + x] = oldTiles[((shape->xSize - 1 - x) * shape->ySize) + y];
+        }
+    }
+
+    free(oldTiles);
 }
 
 void DrawShape(Shape* shape)
@@ -81,7 +122,7 @@ void DrawShape(Shape* shape)
         {
             if(shape->tiles[y * shape->xSize + x] == 1)
             {
-                DrawRectangle(4 + shape->positionX * 72 + x * 72, shape->positionY * 72 + y * 72, 64, 64, BLACK);
+                DrawRectangle(4 + shape->positionX * 72 + x * 72, shape->positionY * 72 + y * 72, 64, 64, shape->color);
             }
         }
     }
@@ -93,7 +134,7 @@ void DrawBoard(int board[20][10], Color colors[20][10])
     {
         for(int y = 0; y < 20; ++y)
         {
-            if(board[y][x] == 0)
+            if(board[y][x] == 1)
             {
                 DrawRectangle(4 + x * 72, y * 72, 64, 64, colors[y][x]);
             }
@@ -109,23 +150,14 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "Raylib Tetris Test");
 
     SetTargetFPS(60);
-    char shapes[7] = {'o', 'l', 'j', 's', 'z', 't', 'i'};
 
     int board[20][10] = {0};
     Color boardColors[20][10];
 
-    Shape* currentShape = CreateShape('o');
+    Shape* currentShape = CreateShape(GetRandomValue(0, 6));
     Shape* nextShape;
 
-    for(int i = 0; i < 20; ++i)
-    {
-        for(int j = 0; j < 10; ++j)
-        {
-            boardColors[i][j] = RED;
-        }
-    }
     int frameCounter = 0;
-    int currentShapeIndex = 0;
     // Main game loop
     while (!WindowShouldClose())
     {
@@ -133,30 +165,39 @@ int main(void)
         if(frameCounter % 60 == 0)
         {
             currentShape->positionY += 1;
+            // RotateShape(currentShape);
         }
 
-        if(currentShape->positionY == 20 - currentShape->ySize - 1)
+        if(currentShape->positionY >= 20 - currentShape->ySize - 1)
         {
-            ++currentShapeIndex;
-            if(currentShapeIndex == 7)
-            {
-                currentShapeIndex = 0;
-            }
             FreeShape(currentShape);
-            currentShape = CreateShape(shapes[currentShapeIndex]);
+            currentShape = CreateShape(GetRandomValue(0, 6));
         }
         
+        if(IsKeyPressed(KEY_SPACE))
+        {
+            RotateShape(currentShape);
+        }
+
+        if(IsKeyPressed(KEY_RIGHT))
+        {
+            if(currentShape->positionX + currentShape->xSize < 10)
+            {
+                currentShape->positionX += 1;
+            }
+        }
+        if(IsKeyPressed(KEY_LEFT))
+        {
+            if(currentShape->positionX - 1 >= 0)
+            {
+                currentShape->positionX -= 1;
+            }
+        }
         BeginDrawing();
 
-        ClearBackground(RAYWHITE);
-        DrawBoard(board, boardColors);
-        // for(int i = 0; i < 7; ++i)
-        // {
-        //     Shape* shape = CreateShape(shapes[i]);
-        //     DrawShape(shape);
-        //     FreeShape(shape);
-        // }
-        
+        ClearBackground(DARKGRAY);
+        DrawBoard(board, boardColors); 
+  
         DrawShape(currentShape);
         
         EndDrawing();
