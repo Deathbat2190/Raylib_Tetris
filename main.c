@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 typedef struct
 {
@@ -92,11 +93,36 @@ int rotationTransitions[7][4][2] = {{{2, -1}, {-2, 2}, {1, -2}, {-1, 1}},  //i
                                     {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //t
                                     {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},}; //z
 
+int board[20][10] = {0};
+Color boardColors[20][10];
+bool WillShapeColide(Shape* shape, int moveX, int moveY)
+{
+    for(int x = 0; x < shape->xSize; ++x)
+    {
+        int boardX = shape->positionX + x + moveX;
+        for(int y = 0; y < shape->ySize; ++y)
+        {
+            int boardY = shape->positionY + y + moveY;
+            if(shape->tiles[y * shape->xSize + x] == 1)
+            {
+                if(boardX < 0 || boardX > 9 || 
+                   boardY < 0 || boardY > 19 ||
+                   board[boardY][boardX] == 1)
+                {
+                    printf("Collision on point x: %d, y: %d", boardX, boardY);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 void RotateShape(Shape* shape)
 {
-    shape->positionX += rotationTransitions[shape->type][shape->rotation][0];
-    shape->positionY += rotationTransitions[shape->type][shape->rotation][1];
-    shape->rotation = (shape->rotation + 1) % 4;
+    int moveX = rotationTransitions[shape->type][shape->rotation][0];
+    int moveY = rotationTransitions[shape->type][shape->rotation][1];
+
     int xSize = shape->xSize;
     shape->xSize = shape->ySize;
     shape->ySize = xSize;
@@ -110,8 +136,67 @@ void RotateShape(Shape* shape)
             shape->tiles[y * shape->xSize + x] = oldTiles[((shape->xSize - 1 - x) * shape->ySize) + y];
         }
     }
-
+    
+    if(!WillShapeColide(shape, moveX, moveY))
+    {
+        shape->positionX += moveX;
+        shape->positionY += moveY;
+        shape->rotation = (shape->rotation + 1) % 4;  
+    }
+    else
+    {
+        xSize = shape->xSize;
+        shape->xSize = shape->ySize;
+        shape->ySize = xSize;
+        memcpy(shape->tiles, oldTiles, shape->xSize * shape->ySize * sizeof(int));
+        return;
+    }
+    
     free(oldTiles);
+}
+
+void UpdateBoard(Shape* shape)
+{
+    for(int x = 0; x < shape->xSize; ++x)
+    {
+        int boardX = shape->positionX + x;
+        for(int y = 0; y < shape->ySize; ++y)
+        {
+            int boardY = shape->positionY + y;
+            if(shape->tiles[y * shape->xSize + x] == 1)
+            {
+                board[boardY][boardX] = 1;
+                boardColors[boardY][boardX] = shape->color;
+            }
+        }
+    }
+
+    for(int y = 19; y >= 0; --y)
+    {
+        int tilesCounter = 0;
+        for(int x = 0; x < 10; ++x)
+        {
+            if(board[y][x] == 1)
+            {
+                tilesCounter += 1;
+            }
+        }
+
+        if(tilesCounter == 10)
+        {
+            for(int j = 0; j < 10; ++j)
+            {
+                for(int i = y - 1; i >= 0; --i)
+                {
+                    board[i + 1][j] = board[i][j];
+                    boardColors[i + 1][j] = boardColors[i][j];
+                }
+                board[0][j] = 0;
+                boardColors[0][j] = DARKGRAY;
+            }
+            ++y;
+        }
+    }
 }
 
 void DrawShape(Shape* shape)
@@ -122,13 +207,13 @@ void DrawShape(Shape* shape)
         {
             if(shape->tiles[y * shape->xSize + x] == 1)
             {
-                DrawRectangle(4 + shape->positionX * 72 + x * 72, shape->positionY * 72 + y * 72, 64, 64, shape->color);
+                DrawRectangle(4 + shape->positionX * 64 + x * 64, shape->positionY * 64 + y * 64, 56, 56, shape->color);
             }
         }
     }
 }
 
-void DrawBoard(int board[20][10], Color colors[20][10])
+void DrawBoard()
 {
     for(int x = 0; x < 10; ++x)
     {
@@ -136,7 +221,7 @@ void DrawBoard(int board[20][10], Color colors[20][10])
         {
             if(board[y][x] == 1)
             {
-                DrawRectangle(4 + x * 72, y * 72, 64, 64, colors[y][x]);
+                DrawRectangle(4 + x * 64, y * 64, 56, 56, boardColors[y][x]);
             }
         }
     }
@@ -144,15 +229,11 @@ void DrawBoard(int board[20][10], Color colors[20][10])
 
 int main(void)
 {
-    const int screenWidth = 720;
+    const int screenWidth = 640;
     const int screenHeight = 1280;
-
     InitWindow(screenWidth, screenHeight, "Raylib Tetris Test");
 
     SetTargetFPS(60);
-
-    int board[20][10] = {0};
-    Color boardColors[20][10];
 
     Shape* currentShape = CreateShape(GetRandomValue(0, 6));
     Shape* nextShape;
@@ -164,16 +245,19 @@ int main(void)
         ++frameCounter;
         if(frameCounter % 60 == 0)
         {
-            currentShape->positionY += 1;
-            // RotateShape(currentShape);
+            if(WillShapeColide(currentShape, 0, 1))
+            {
+                UpdateBoard(currentShape);
+                FreeShape(currentShape);
+                currentShape = CreateShape(GetRandomValue(0, 6));
+            }
+            else
+            {
+                currentShape->positionY += 1;
+            }
+            
         }
-
-        if(currentShape->positionY >= 20 - currentShape->ySize - 1)
-        {
-            FreeShape(currentShape);
-            currentShape = CreateShape(GetRandomValue(0, 6));
-        }
-        
+     
         if(IsKeyPressed(KEY_SPACE))
         {
             RotateShape(currentShape);
@@ -181,14 +265,14 @@ int main(void)
 
         if(IsKeyPressed(KEY_RIGHT))
         {
-            if(currentShape->positionX + currentShape->xSize < 10)
+            if(!WillShapeColide(currentShape, 1, 0))
             {
                 currentShape->positionX += 1;
             }
         }
         if(IsKeyPressed(KEY_LEFT))
         {
-            if(currentShape->positionX - 1 >= 0)
+            if(!WillShapeColide(currentShape, -1, 0))
             {
                 currentShape->positionX -= 1;
             }
@@ -196,7 +280,7 @@ int main(void)
         BeginDrawing();
 
         ClearBackground(DARKGRAY);
-        DrawBoard(board, boardColors); 
+        DrawBoard(); 
   
         DrawShape(currentShape);
         
