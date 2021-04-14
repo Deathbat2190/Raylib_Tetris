@@ -5,6 +5,17 @@
 
 typedef struct
 {
+    int board[20][10];
+    Color boardColors[20][10];
+    int rowsToDelete[4];
+    bool deleteRows;
+    bool startDeleteAnimation;
+    int rotationTransitions[7][4][2];
+    int animationCounter;
+} GameState;
+
+typedef struct
+{
     int rotation;
     int* tiles;
     int xSize;
@@ -14,6 +25,34 @@ typedef struct
     int type;
     Color color;
 } Shape;
+
+GameState* InitGameState()
+{
+    GameState* gameState = (GameState*)malloc(sizeof(GameState));
+    for(int i = 0; i < 20; ++i)
+    {
+        for(int j = 0; j < 10; ++j)
+        {
+            gameState->board[i][j] = 0;
+        }
+    }
+    for(int i = 0; i < 4; ++i)
+    {
+        gameState->rowsToDelete[i] = -1;
+    }
+    gameState->deleteRows = false;
+    gameState->startDeleteAnimation = false;
+    int rotationTransitions[7][4][2] = {{{2, -1}, {-2, 2}, {1, -2}, {-1, 1}},  //i
+                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //j
+                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //l
+                                        {{0, 0},  {0, 0},  {0, 0},  {0, 0}},   //o
+                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //s
+                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //t
+                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},}; //z
+    memcpy(gameState->rotationTransitions, rotationTransitions, sizeof(gameState->rotationTransitions));
+    gameState->animationCounter = 0;
+    return gameState;
+}
 
 Shape* InitShape(int xSize, int ySize)
 {
@@ -85,22 +124,8 @@ void FreeShape(Shape* shape)
     free(shape);
 }
 
-int rotationTransitions[7][4][2] = {{{2, -1}, {-2, 2}, {1, -2}, {-1, 1}},  //i
-                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //j
-                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //l
-                                    {{0, 0},  {0, 0},  {0, 0},  {0, 0}},   //o
-                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //s
-                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //t
-                                    {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},}; //z
-
-int board[20][10] = {0};
-Color boardColors[20][10];
-int rowsToDelete[4] = {-1, -1, -1, -1};
-bool deleteRows = false;
-bool WillShapeColide(Shape* shape, int moveX, int moveY)
+bool WillShapeColide(Shape* shape, int moveX, int moveY, GameState* gameState)
 {
-    
-
     for(int x = 0; x < shape->xSize; ++x)
     {
         int boardX = shape->positionX + x + moveX;
@@ -111,7 +136,7 @@ bool WillShapeColide(Shape* shape, int moveX, int moveY)
             {
                 if(boardX < 0 || boardX > 9 || 
                    boardY < 0 || boardY > 19 ||
-                   board[boardY][boardX] == 1)
+                   gameState->board[boardY][boardX] == 1)
                 {
                     return true;
                 }
@@ -121,10 +146,10 @@ bool WillShapeColide(Shape* shape, int moveX, int moveY)
     return false;
 }
 
-void RotateShape(Shape* shape)
+void RotateShape(Shape* shape, GameState* gameState)
 {
-    int moveX = rotationTransitions[shape->type][shape->rotation][0];
-    int moveY = rotationTransitions[shape->type][shape->rotation][1];
+    int moveX = gameState->rotationTransitions[shape->type][shape->rotation][0];
+    int moveY = gameState->rotationTransitions[shape->type][shape->rotation][1];
 
     int xSize = shape->xSize;
     shape->xSize = shape->ySize;
@@ -140,7 +165,7 @@ void RotateShape(Shape* shape)
         }
     }
     
-    if(!WillShapeColide(shape, moveX, moveY))
+    if(!WillShapeColide(shape, moveX, moveY, gameState))
     {
         shape->positionX += moveX;
         shape->positionY += moveY;
@@ -158,7 +183,7 @@ void RotateShape(Shape* shape)
     free(oldTiles);
 }
 
-void UpdateBoard(Shape* shape)
+void UpdateBoard(Shape* shape, GameState* gameState)
 {
     for(int x = 0; x < shape->xSize; ++x)
     {
@@ -168,8 +193,8 @@ void UpdateBoard(Shape* shape)
             int boardY = shape->positionY + y;
             if(shape->tiles[y * shape->xSize + x] == 1)
             {
-                board[boardY][boardX] = 1;
-                boardColors[boardY][boardX] = shape->color;
+                gameState->board[boardY][boardX] = 1;
+                gameState->boardColors[boardY][boardX] = shape->color;
             }
         }
     }
@@ -179,7 +204,7 @@ void UpdateBoard(Shape* shape)
         int tilesCounter = 0;
         for(int x = 0; x < 10; ++x)
         {
-            if(board[y][x] == 1)
+            if(gameState->board[y][x] == 1)
             {
                 tilesCounter += 1;
             }
@@ -187,47 +212,50 @@ void UpdateBoard(Shape* shape)
 
         if(tilesCounter == 10)
         {
-            deleteRows = true;
             for(int i = 0; i < 4; ++i)
             {
-                if(rowsToDelete[i] == -1)
+                if(gameState->rowsToDelete[i] == -1)
                 {
-                    rowsToDelete[i] = y;
+                    gameState->rowsToDelete[i] = y;
                     break;
                 }
             }
         }
     }
+    if(gameState->rowsToDelete[0] > -1)
+    {
+        gameState->startDeleteAnimation = true;
+    }
 }
 
-void DeleteRows()
+void DeleteRows(GameState* gameState)
 {
     for(int i = 0; i < 4; ++i)
     {
-        if(rowsToDelete[i] > -1)
+        if(gameState->rowsToDelete[i] > -1)
         {
             for(int x = 0; x < 10; ++x)
             {
-                for(int y = rowsToDelete[i] - 1; y >= 0; --y)
+                for(int y = gameState->rowsToDelete[i] - 1; y >= 0; --y)
                 {
-                    board[y + 1][x] = board[y][x];
-                    boardColors[y + 1][x] = boardColors[y][x];
+                    gameState->board[y + 1][x] = gameState->board[y][x];
+                    gameState->boardColors[y + 1][x] = gameState->boardColors[y][x];
                 }
-                board[0][x] = 0;
-                boardColors[0][x] = DARKGRAY;
+                gameState->board[0][x] = 0;
+                gameState->boardColors[0][x] = DARKGRAY;
             }
 
-            if(i < 3 && rowsToDelete[i + 1] > -1)
+            if(i < 3 && gameState->rowsToDelete[i + 1] > -1)
             {
                 for(int j = i + 1; j < 4; ++j)
                 {
-                    rowsToDelete[j] += 1;
+                    gameState->rowsToDelete[j] += 1;
                 }
             }
-            rowsToDelete[i] = -1;
+            gameState->rowsToDelete[i] = -1;
         }
     }
-    deleteRows = false;
+    gameState->deleteRows = false;
 }
 
 void DrawShape(Shape* shape)
@@ -244,17 +272,47 @@ void DrawShape(Shape* shape)
     }
 }
 
-void DrawBoard()
+void DrawBoard(GameState* gameState)
 {
     for(int x = 0; x < 10; ++x)
     {
         for(int y = 0; y < 20; ++y)
         {
-            if(board[y][x] == 1)
+            if(gameState->board[y][x] == 1)
             {
-                DrawRectangle(4 + x * 64, y * 64, 56, 56, boardColors[y][x]);
+                DrawRectangle(4 + x * 64, y * 64, 56, 56, gameState->boardColors[y][x]);
             }
         }
+    }
+}
+
+void AnimateRows(GameState* gameState)
+{
+    ++(gameState->animationCounter);
+
+    for(int i = 0; i < 4; ++i)
+    {
+        if(gameState->rowsToDelete[i] > -1)
+        {
+            for(int x = 0; x < 10; ++x)
+            {
+                Color oldColor = gameState->boardColors[gameState->rowsToDelete[i]][x];
+                unsigned char r = WHITE.r - oldColor.r;
+                unsigned char g = WHITE.g - oldColor.g;
+                unsigned char b = WHITE.b - oldColor.b;
+                oldColor.r += (gameState->animationCounter / 30.0) * r;
+                oldColor.g += (gameState->animationCounter / 30.0) * g;
+                oldColor.b += (gameState->animationCounter / 30.0) * b;
+                gameState->boardColors[gameState->rowsToDelete[i]][x] = oldColor;
+            }
+        }
+    }
+
+    if(gameState->animationCounter == 30)
+    {
+        gameState->startDeleteAnimation = false;
+        gameState->deleteRows = true;
+        gameState->animationCounter = 0;
     }
 }
 
@@ -266,23 +324,21 @@ int main(void)
 
     SetTargetFPS(60);
 
+    GameState* gameState = InitGameState();
+
     Shape* currentShape = CreateShape(GetRandomValue(0, 6));
     Shape* nextShape;
 
     int frameCounter = 0;
-    // Main game loop
+
     while (!WindowShouldClose())
     {
         ++frameCounter;
         if(frameCounter % 30 == 0)
         {
-            if(WillShapeColide(currentShape, 0, 1))
+            if(WillShapeColide(currentShape, 0, 1, gameState))
             {
-                UpdateBoard(currentShape);
-                if(deleteRows)
-                {
-                    DeleteRows();
-                }
+                UpdateBoard(currentShape, gameState);
                 FreeShape(currentShape);
                 currentShape = CreateShape(GetRandomValue(0, 6));
             }
@@ -290,24 +346,34 @@ int main(void)
             {
                 currentShape->positionY += 1;
             }
-            
+            frameCounter = 0;
         }
      
+        if(gameState->deleteRows)
+        {
+            DeleteRows(gameState);
+        }
+
+        if(gameState->startDeleteAnimation)
+        {
+            AnimateRows(gameState);
+        }
+
         if(IsKeyPressed(KEY_SPACE))
         {
-            RotateShape(currentShape);
+            RotateShape(currentShape, gameState);
         }
 
         if(IsKeyPressed(KEY_RIGHT))
         {
-            if(!WillShapeColide(currentShape, 1, 0))
+            if(!WillShapeColide(currentShape, 1, 0, gameState))
             {
                 currentShape->positionX += 1;
             }
         }
         if(IsKeyPressed(KEY_LEFT))
         {
-            if(!WillShapeColide(currentShape, -1, 0))
+            if(!WillShapeColide(currentShape, -1, 0, gameState))
             {
                 currentShape->positionX -= 1;
             }
@@ -316,7 +382,7 @@ int main(void)
         {
             for(int i = currentShape->positionY + 1; i <= 20; ++i)
             {
-                if(WillShapeColide(currentShape, 0, i - currentShape->positionY))
+                if(WillShapeColide(currentShape, 0, i - currentShape->positionY, gameState))
                 {
                     currentShape->positionY = i - 1;
                     break;
@@ -326,13 +392,13 @@ int main(void)
         BeginDrawing();
 
         ClearBackground(DARKGRAY);
-        DrawBoard(); 
+        DrawBoard(gameState); 
   
         DrawShape(currentShape);
         
         EndDrawing();
     }
-
+    free(gameState);
     CloseWindow();
 
     return 0;
