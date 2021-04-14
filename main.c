@@ -1,7 +1,7 @@
 #include "raylib.h"
 #include <stdlib.h>
 #include <string.h>
-// #include <stdio.h>
+#include <stdio.h>
 
 typedef struct
 {
@@ -95,8 +95,12 @@ int rotationTransitions[7][4][2] = {{{2, -1}, {-2, 2}, {1, -2}, {-1, 1}},  //i
 
 int board[20][10] = {0};
 Color boardColors[20][10];
+int rowsToDelete[4] = {-1, -1, -1, -1};
+bool deleteRows = false;
 bool WillShapeColide(Shape* shape, int moveX, int moveY)
 {
+    
+
     for(int x = 0; x < shape->xSize; ++x)
     {
         int boardX = shape->positionX + x + moveX;
@@ -183,19 +187,47 @@ void UpdateBoard(Shape* shape)
 
         if(tilesCounter == 10)
         {
-            for(int j = 0; j < 10; ++j)
+            deleteRows = true;
+            for(int i = 0; i < 4; ++i)
             {
-                for(int i = y - 1; i >= 0; --i)
+                if(rowsToDelete[i] == -1)
                 {
-                    board[i + 1][j] = board[i][j];
-                    boardColors[i + 1][j] = boardColors[i][j];
+                    rowsToDelete[i] = y;
+                    break;
                 }
-                board[0][j] = 0;
-                boardColors[0][j] = DARKGRAY;
             }
-            ++y;
         }
     }
+}
+
+void DeleteRows()
+{
+    for(int i = 0; i < 4; ++i)
+    {
+        if(rowsToDelete[i] > -1)
+        {
+            for(int x = 0; x < 10; ++x)
+            {
+                for(int y = rowsToDelete[i] - 1; y >= 0; --y)
+                {
+                    board[y + 1][x] = board[y][x];
+                    boardColors[y + 1][x] = boardColors[y][x];
+                }
+                board[0][x] = 0;
+                boardColors[0][x] = DARKGRAY;
+            }
+
+            if(i < 3 && rowsToDelete[i + 1] > -1)
+            {
+                for(int j = i + 1; j < 4; ++j)
+                {
+                    rowsToDelete[j] += 1;
+                }
+            }
+            rowsToDelete[i] = -1;
+        }
+    }
+    deleteRows = false;
 }
 
 void DrawShape(Shape* shape)
@@ -247,6 +279,10 @@ int main(void)
             if(WillShapeColide(currentShape, 0, 1))
             {
                 UpdateBoard(currentShape);
+                if(deleteRows)
+                {
+                    DeleteRows();
+                }
                 FreeShape(currentShape);
                 currentShape = CreateShape(GetRandomValue(0, 6));
             }
@@ -278,7 +314,7 @@ int main(void)
         }
         if(IsKeyPressed(KEY_DOWN))
         {
-            for(int i = currentShape->positionY + 1; i < 20; ++i)
+            for(int i = currentShape->positionY + 1; i <= 20; ++i)
             {
                 if(WillShapeColide(currentShape, 0, i - currentShape->positionY))
                 {
