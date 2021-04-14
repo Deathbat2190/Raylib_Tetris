@@ -1,7 +1,7 @@
 #include "raylib.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+// #include <stdio.h>
 
 typedef struct
 {
@@ -109,7 +109,6 @@ bool WillShapeColide(Shape* shape, int moveX, int moveY)
                    boardY < 0 || boardY > 19 ||
                    board[boardY][boardX] == 1)
                 {
-                    printf("Collision on point x: %d, y: %d", boardX, boardY);
                     return true;
                 }
             }
@@ -243,7 +242,7 @@ int main(void)
     while (!WindowShouldClose())
     {
         ++frameCounter;
-        if(frameCounter % 60 == 0)
+        if(frameCounter % 30 == 0)
         {
             if(WillShapeColide(currentShape, 0, 1))
             {
@@ -275,6 +274,17 @@ int main(void)
             if(!WillShapeColide(currentShape, -1, 0))
             {
                 currentShape->positionX -= 1;
+            }
+        }
+        if(IsKeyPressed(KEY_DOWN))
+        {
+            for(int i = currentShape->positionY + 1; i < 20; ++i)
+            {
+                if(WillShapeColide(currentShape, 0, i - currentShape->positionY))
+                {
+                    currentShape->positionY = i - 1;
+                    break;
+                }
             }
         }
         BeginDrawing();
