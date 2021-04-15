@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 typedef struct
 {
@@ -12,6 +13,8 @@ typedef struct
     bool startDeleteAnimation;
     int rotationTransitions[7][4][2];
     int animationCounter;
+    int score;
+    time_t startTime;
 } GameState;
 
 typedef struct
@@ -51,6 +54,7 @@ GameState* InitGameState()
                                         {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},}; //z
     memcpy(gameState->rotationTransitions, rotationTransitions, sizeof(gameState->rotationTransitions));
     gameState->animationCounter = 0;
+    gameState->score = 0;
     return gameState;
 }
 
@@ -199,6 +203,7 @@ void UpdateBoard(Shape* shape, GameState* gameState)
         }
     }
 
+    int rows = 0;
     for(int y = 19; y >= 0; --y)
     {
         int tilesCounter = 0;
@@ -212,6 +217,7 @@ void UpdateBoard(Shape* shape, GameState* gameState)
 
         if(tilesCounter == 10)
         {
+            ++rows;
             for(int i = 0; i < 4; ++i)
             {
                 if(gameState->rowsToDelete[i] == -1)
@@ -224,6 +230,14 @@ void UpdateBoard(Shape* shape, GameState* gameState)
     }
     if(gameState->rowsToDelete[0] > -1)
     {
+        if(rows == 4)
+        {
+            gameState->score += 800;
+        }
+        else
+        {
+            gameState->score += rows * 100;
+        }
         gameState->startDeleteAnimation = true;
     }
 }
@@ -267,6 +281,21 @@ void DrawShape(Shape* shape)
             if(shape->tiles[y * shape->xSize + x] == 1)
             {
                 DrawRectangle(4 + shape->positionX * 64 + x * 64, shape->positionY * 64 + y * 64, 56, 56, shape->color);
+            }
+        }
+    }
+}
+
+void DrawNextShape(Shape* shape)
+{
+    int positionX = 640 + (400 - shape->xSize * 64) / 2;
+    for(int x = 0; x < shape->xSize; ++x)
+    {
+        for(int y = 0; y < shape->ySize; ++y)
+        {
+            if(shape->tiles[y * shape->xSize + x] == 1)
+            {
+                DrawRectangle(4 + positionX + x * 64, 440 + y * 64, 56, 56, shape->color);
             }
         }
     }
@@ -316,31 +345,62 @@ void AnimateRows(GameState* gameState)
     }
 }
 
+void TimeToString(GameState* gameState, char* destination)
+{
+    int difference = time(0) - gameState->startTime;
+    int minutes = difference / 60;
+    int seconds = difference % 60;
+    char buffer[10];
+    sprintf(buffer, "%d", minutes);
+    strcat(destination, buffer);
+    strcat(destination, ":");
+    if(seconds < 10)
+    {
+        strcat(destination, "0");
+    }
+    sprintf(buffer, "%d", seconds);
+    strcat(destination, buffer);
+}
+
 int main(void)
 {
-    const int screenWidth = 640;
+    const int screenWidth = 1030;
     const int screenHeight = 1280;
     InitWindow(screenWidth, screenHeight, "Raylib Tetris Test");
+    InitAudioDevice();
+
+    Sound collisionSound = LoadSound("resources/collision.wav");
+    Sound rowSound = LoadSound("resources/row.wav");
 
     SetTargetFPS(60);
-
     GameState* gameState = InitGameState();
 
     Shape* currentShape = CreateShape(GetRandomValue(0, 6));
-    Shape* nextShape;
+    Shape* nextShape = CreateShape(GetRandomValue(0, 6));
 
     int frameCounter = 0;
+    char scoreString[12];
+    char gameTime[10];
+    sprintf(scoreString, "%d", gameState->score);
+
+    time(&(gameState->startTime));
 
     while (!WindowShouldClose())
     {
+        gameTime[0] = '\0';
+        TimeToString(gameState, gameTime);
         ++frameCounter;
         if(frameCounter % 30 == 0)
         {
             if(WillShapeColide(currentShape, 0, 1, gameState))
             {
+                PlaySound(collisionSound);
                 UpdateBoard(currentShape, gameState);
+                sprintf(scoreString, "%d", gameState->score);
                 FreeShape(currentShape);
-                currentShape = CreateShape(GetRandomValue(0, 6));
+
+                currentShape = nextShape;
+                nextShape = CreateShape(GetRandomValue(0, 6));
             }
             else
             {
@@ -351,6 +411,7 @@ int main(void)
      
         if(gameState->deleteRows)
         {
+            PlaySound(rowSound);
             DeleteRows(gameState);
         }
 
@@ -391,14 +452,31 @@ int main(void)
         }
         BeginDrawing();
 
-        ClearBackground(DARKGRAY);
+        ClearBackground((Color){30, 30, 30, 255});
+        DrawRectangle(640, 0, 10, 1280, (Color){60, 60, 60, 255});
+        DrawText("TETRIS", 720, 100, 60, RAYWHITE);
         DrawBoard(gameState); 
-  
+        DrawText("NEXT SHAPE", 706, 350, 40, RAYWHITE);  
         DrawShape(currentShape);
+        DrawNextShape(nextShape);
         
+        DrawText("SCORE", 772, 800, 40, RAYWHITE);
+
+        DrawText(scoreString, 840 - (MeasureText(scoreString, 40) / 2), 860, 40, RAYWHITE);
+        DrawText("TIME", 788, 1000, 40, RAYWHITE);
+        DrawText(gameTime, 840 - (MeasureText(gameTime, 40) / 2), 1060, 40, RAYWHITE);
+
         EndDrawing();
     }
+
     free(gameState);
+    free(nextShape);
+    free(currentShape);
+
+    StopSoundMulti();
+    UnloadSound(collisionSound);
+    UnloadSound(rowSound);
+    CloseAudioDevice();
     CloseWindow();
 
     return 0;
