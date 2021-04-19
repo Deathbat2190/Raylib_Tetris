@@ -46,12 +46,12 @@ GameState* InitGameState()
     gameState->deleteRows = false;
     gameState->startDeleteAnimation = false;
     int rotationTransitions[7][4][2] = {{{2, -1}, {-2, 2}, {1, -2}, {-1, 1}},  //i
-                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //j
-                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //l
-                                        {{0, 0},  {0, 0},  {0, 0},  {0, 0}},   //o
-                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //s
-                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //t
-                                        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},}; //z
+        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //j
+        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //l
+        {{0, 0},  {0, 0},  {0, 0},  {0, 0}},   //o
+        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //s
+        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},   //t
+        {{1, 0},  {-1, 1}, {0, -1}, {0, 0}},}; //z
     memcpy(gameState->rotationTransitions, rotationTransitions, sizeof(gameState->rotationTransitions));
     gameState->animationCounter = 0;
     gameState->score = 0;
@@ -76,47 +76,47 @@ Shape* CreateShape(int type)
     switch (type)
     {
         case 0:
-            shape = InitShape(4, 1);
-            shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 1; shape->tiles[3] = 1;
-            shape->color = BLUE;
-            break;
+        shape = InitShape(4, 1);
+        shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 1; shape->tiles[3] = 1;
+        shape->color = BLUE;
+        break;
         case 1:
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 1; shape->tiles[1] = 0; shape->tiles[2] = 0; 
-            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
-            shape->color = DARKBLUE;
-            break;
+        shape = InitShape(3, 2);
+        shape->tiles[0] = 1; shape->tiles[1] = 0; shape->tiles[2] = 0; 
+        shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
+        shape->color = DARKBLUE;
+        break;
         case 2:
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 0; shape->tiles[1] = 0; shape->tiles[2] = 1; 
-            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
-            shape->color = ORANGE;
-            break;
+        shape = InitShape(3, 2);
+        shape->tiles[0] = 0; shape->tiles[1] = 0; shape->tiles[2] = 1; 
+        shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
+        shape->color = ORANGE;
+        break;
         case 3:
-            shape = InitShape(2, 2);
-            shape->tiles[0] = 1; shape->tiles[1] = 1; 
-            shape->tiles[2] = 1; shape->tiles[3] = 1;
-            shape->positionX = 4;
-            shape->color = YELLOW;
-            break;   
+        shape = InitShape(2, 2);
+        shape->tiles[0] = 1; shape->tiles[1] = 1; 
+        shape->tiles[2] = 1; shape->tiles[3] = 1;
+        shape->positionX = 4;
+        shape->color = YELLOW;
+        break;   
         case 4:
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 0; shape->tiles[1] = 1; shape->tiles[2] = 1; 
-            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 0;
-            shape->color = GREEN;
-            break;
+        shape = InitShape(3, 2);
+        shape->tiles[0] = 0; shape->tiles[1] = 1; shape->tiles[2] = 1; 
+        shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 0;
+        shape->color = GREEN;
+        break;
         case 5:
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 0; shape->tiles[1] = 1; shape->tiles[2] = 0; 
-            shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
-            shape->color = PURPLE;
-            break;
+        shape = InitShape(3, 2);
+        shape->tiles[0] = 0; shape->tiles[1] = 1; shape->tiles[2] = 0; 
+        shape->tiles[3] = 1; shape->tiles[4] = 1; shape->tiles[5] = 1;
+        shape->color = PURPLE;
+        break;
         case 6:
-            shape = InitShape(3, 2);
-            shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 0; 
-            shape->tiles[3] = 0; shape->tiles[4] = 1; shape->tiles[5] = 1;
-            shape->color = RED;
-            break;
+        shape = InitShape(3, 2);
+        shape->tiles[0] = 1; shape->tiles[1] = 1; shape->tiles[2] = 0; 
+        shape->tiles[3] = 0; shape->tiles[4] = 1; shape->tiles[5] = 1;
+        shape->color = RED;
+        break;
     }
     shape->type = type;
     return shape;
@@ -154,11 +154,11 @@ void RotateShape(Shape* shape, GameState* gameState)
 {
     int moveX = gameState->rotationTransitions[shape->type][shape->rotation][0];
     int moveY = gameState->rotationTransitions[shape->type][shape->rotation][1];
-
+    
     int xSize = shape->xSize;
     shape->xSize = shape->ySize;
     shape->ySize = xSize;
-
+    
     int* oldTiles = (int*)malloc(shape->xSize * shape->ySize * sizeof(int));
     memcpy(oldTiles, shape->tiles, shape->xSize * shape->ySize * sizeof(int));
     for(int y = 0; y < shape->ySize; ++y)
@@ -202,7 +202,7 @@ void UpdateBoard(Shape* shape, GameState* gameState)
             }
         }
     }
-
+    
     int rows = 0;
     for(int y = 19; y >= 0; --y)
     {
@@ -214,7 +214,7 @@ void UpdateBoard(Shape* shape, GameState* gameState)
                 tilesCounter += 1;
             }
         }
-
+        
         if(tilesCounter == 10)
         {
             ++rows;
@@ -258,7 +258,7 @@ void DeleteRows(GameState* gameState)
                 gameState->board[0][x] = 0;
                 gameState->boardColors[0][x] = DARKGRAY;
             }
-
+            
             if(i < 3 && gameState->rowsToDelete[i + 1] > -1)
             {
                 for(int j = i + 1; j < 4; ++j)
@@ -318,7 +318,7 @@ void DrawBoard(GameState* gameState)
 void AnimateRows(GameState* gameState)
 {
     ++(gameState->animationCounter);
-
+    
     for(int i = 0; i < 4; ++i)
     {
         if(gameState->rowsToDelete[i] > -1)
@@ -336,7 +336,7 @@ void AnimateRows(GameState* gameState)
             }
         }
     }
-
+    
     if(gameState->animationCounter == 30)
     {
         gameState->startDeleteAnimation = false;
@@ -368,23 +368,23 @@ int main(void)
     const int screenHeight = 1280;
     InitWindow(screenWidth, screenHeight, "Raylib Tetris Test");
     InitAudioDevice();
-
-    Sound collisionSound = LoadSound("resources/collision.wav");
-    Sound rowSound = LoadSound("resources/row.wav");
-
+    
+    Sound collisionSound = LoadSound("../resources/collision.wav");
+    Sound rowSound = LoadSound("../resources/row.wav");
+    
     SetTargetFPS(60);
     GameState* gameState = InitGameState();
-
+    
     Shape* currentShape = CreateShape(GetRandomValue(0, 6));
     Shape* nextShape = CreateShape(GetRandomValue(0, 6));
-
+    
     int frameCounter = 0;
     char scoreString[12];
     char gameTime[10];
     sprintf(scoreString, "%d", gameState->score);
-
+    
     time(&(gameState->startTime));
-
+    
     while (!WindowShouldClose())
     {
         gameTime[0] = '\0';
@@ -398,7 +398,7 @@ int main(void)
                 UpdateBoard(currentShape, gameState);
                 sprintf(scoreString, "%d", gameState->score);
                 FreeShape(currentShape);
-
+                
                 currentShape = nextShape;
                 nextShape = CreateShape(GetRandomValue(0, 6));
             }
@@ -408,23 +408,23 @@ int main(void)
             }
             frameCounter = 0;
         }
-     
+        
         if(gameState->deleteRows)
         {
             PlaySound(rowSound);
             DeleteRows(gameState);
         }
-
+        
         if(gameState->startDeleteAnimation)
         {
             AnimateRows(gameState);
         }
-
+        
         if(IsKeyPressed(KEY_SPACE))
         {
             RotateShape(currentShape, gameState);
         }
-
+        
         if(IsKeyPressed(KEY_RIGHT))
         {
             if(!WillShapeColide(currentShape, 1, 0, gameState))
@@ -451,7 +451,7 @@ int main(void)
             }
         }
         BeginDrawing();
-
+        
         ClearBackground((Color){30, 30, 30, 255});
         DrawRectangle(640, 0, 10, 1280, (Color){60, 60, 60, 255});
         DrawText("TETRIS", 720, 100, 60, RAYWHITE);
@@ -461,23 +461,23 @@ int main(void)
         DrawNextShape(nextShape);
         
         DrawText("SCORE", 772, 800, 40, RAYWHITE);
-
+        
         DrawText(scoreString, 840 - (MeasureText(scoreString, 40) / 2), 860, 40, RAYWHITE);
         DrawText("TIME", 788, 1000, 40, RAYWHITE);
         DrawText(gameTime, 840 - (MeasureText(gameTime, 40) / 2), 1060, 40, RAYWHITE);
-
+        
         EndDrawing();
     }
-
+    
     free(gameState);
     free(nextShape);
     free(currentShape);
-
+    
     StopSoundMulti();
     UnloadSound(collisionSound);
     UnloadSound(rowSound);
     CloseAudioDevice();
     CloseWindow();
-
+    
     return 0;
 }
